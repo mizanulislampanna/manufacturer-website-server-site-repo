@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -39,12 +39,26 @@ async function run() {
 
     const toolsCollection = client.db("tools_express").collection("tools");
     const usersCollection = client.db("tools_express").collection("user");
+    const bookingCollection = client.db("tools_express").collection("bookings");
 
     app.get("/tools", async (req, res) => {
       const query = {};
       const cursor = toolsCollection.find(query);
       const services = await cursor.toArray();
       res.send(services);
+    });
+
+    app.get("/tools/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const bike = await toolsCollection.findOne(query);
+      res.send(bike);
+    });
+
+    app.post("/booking", async (req, res) => {
+      const booking = req.body;
+      const result = await bookingCollection.insertOne(booking);
+      res.send({ success: true, result });
     });
 
     app.put("/user/:email", async (req, res) => {
@@ -68,16 +82,18 @@ async function run() {
       res.send({ result, token });
     });
 
-    app.get("/order", verifyJWT, async (req, res) => {
-      const patient = req.query.patient;
-      const decodedEmail = req.decoded.email;
-      if (petient === decodedEmail) {
-        const query = { patient: patient };
-        const booking = await bookingCollection.find(query).toArray();
-        res.send(booking);
-      } else {
-        return res.status(403).send({ message: "forbidden access" });
-      }
+    app.get("/booking", async (req, res) => {
+      const customerEmail = req.query.customerEmail;
+      const query = { customerEmail: customerEmail };
+      const booking = await bookingCollection.find(query).toArray();
+      res.send(booking);
+    });
+
+    app.delete("/booking/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await bookingCollection.deleteOne(query);
+      res.send(result);
     });
   } finally {
   }
